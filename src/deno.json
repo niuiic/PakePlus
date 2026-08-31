@@ -1,0 +1,15 @@
+{
+  "desktop": {
+    "app": {
+      "name": "trade-helper",
+      "identifier": "com.trade-helper",
+      "icons": { "windows": "./icon.ico" }
+    }
+  },
+  "compilerOptions": {
+    "lib": ["deno.desktop", "deno.unstable", "deno.ns"]
+  },
+  "tasks": {
+    "build": "deno desktop -A --target x86_64-pc-windows-msvc ./main.ts"
+  }
+}
