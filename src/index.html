@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期货交易盈亏比计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container> :last-child {
+            margin-bottom: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .upload-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .search-select {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        .select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            display: none;
+        }
+
+        .select-dropdown.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item .code {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .dropdown-item .name {
+            color: #666;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .input-row .form-group {
+            flex: 1;
+        }
+
+        .upload-area {
+            border: 2px dashed #c0b8d8;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background 0.3s;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #faf8ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #f0ecff;
+        }
+
+        .upload-area img.preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .upload-area .upload-hint {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        #uploadFile {
+            display: none;
+        }
+
+        .upload-loading {
+            display: inline-block;
+            margin-left: 8px;
+            color: #764ba2;
+        }
+
+        .price-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .price-input:focus {
+            border-color: #667eea;
+        }
+
+        .price-input.invalid {
+            border-color: #dc3545;
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .result-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 24px;
+            margin-bottom: 12px;
+        }
+
+        .validation-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #856404;
+            font-weight: 500;
+        }
+
+        .validation-icon {
+            font-size: 18px;
+        }
+
+        .validation-text {
+            font-size: 14px;
+        }
+
+        .profit-ratio-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+
+        .ratio-section {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .ratio-section.full {
+            flex: 0 0 100%;
+        }
+
+        .ratio-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .ratio-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .ratio-value.green {
+            color: #ffc107;
+        }
+
+        .ratio-value.red {
+            color: #dc3545;
+        }
+
+        .ratio-value.blue {
+            color: #28a745;
+        }
+
+        .ratio-tip {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .result-table th,
+        .result-table td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .result-table tr:hover {
+            background: #f9f9f9;
+        }
+
+        .result-table tr {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .result-table tr.clicked {
+            background-color: #c3e6cb !important;
+        }
+
+        .result-table .profit {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .result-table .risk {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .contract-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .contract-table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+            color: #666;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            width: 120px;
+        }
+
+        .contract-table td {
+            padding: 10px 14px;
+            font-weight: 700;
+            color: #1a1a1a;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .contract-table tr:last-child th,
+        .contract-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .contract-result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .contract-result-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: #666;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            width: 110px;
+        }
+
+        .contract-result-table td {
+            padding: 12px 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .contract-result-table tr:last-child th,
+        .contract-result-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Desktop layout */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .input-panel {
+            position: sticky;
+            top: 30px;
+        }
+
+        .result-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .input-panel {
+                position: static;
+            }
+        }
+
+        @media (min-width: 1025px) {
+            body {
+                padding: 30px;
+            }
+
+            h1 {
+                font-size: 30px;
+            }
+
+            .card,
+            .result-section {
+                padding: 28px 32px;
+            }
+
+            .input-row {
+                gap: 16px;
+            }
+
+            .search-input,
+            .price-input {
+                padding: 13px 16px;
+                font-size: 15px;
+            }
+
+            .profit-ratio-box {
+                padding: 20px;
+                gap: 16px;
+            }
+
+            .ratio-section {
+                padding: 16px;
+            }
+
+            .ratio-value {
+                font-size: 32px;
+            }
+
+            .ratio-label {
+                font-size: 13px;
+            }
+
+            .contract-info {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                padding: 24px;
+                gap: 16px;
+            }
+
+            .info-item {
+                gap: 6px;
+            }
+
+            .info-label {
+                font-size: 13px;
+            }
+
+            .info-value {
+                font-size: 15px;
+            }
+
+            .result-table th,
+            .result-table td {
+                padding: 14px 18px;
+                font-size: 14px;
+            }
+
+            .result-table {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="app-layout">
+            <!-- 左侧：输入面板 -->
+            <div class="input-panel">
+                <div class="card">
+                    <div class="form-group">
+                        <label>资金总量</label>
+                        <input type="number" class="price-input" id="totalCapital" placeholder="输入总资金" step="any">
+                    </div>
+
+                    <div class="upload-group">
+                        <label>截图识别</label>
+                        <div class="upload-area" id="uploadArea">
+                            <div id="uploadHint">点击或拖拽上传交易截图</div>
+                            <div class="upload-hint">自动识别合约、开仓价、止损价、止盈价</div>
+                            <input type="file" id="uploadFile" accept="image/*">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>选择期货合约</label>
+                        <div class="search-select">
+                            <input type="text" class="search-input" id="contractSearch" placeholder="搜索合约代码或名称..."
+                                autocomplete="off">
+                            <div class="select-dropdown" id="contractDropdown"></div>
+                            <input type="hidden" id="selectedContract">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>开仓价格</label>
+                            <input type="number" class="price-input" id="entryPrice" placeholder="输入开仓价格" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label>止损价格</label>
+                            <input type="number" class="price-input" id="stopLossPrice" placeholder="输入止损价格" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label>止盈价格</label>
+                            <input type="number" class="price-input" id="takeProfitPrice" placeholder="输入止盈价格" step="any">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>预计胜率（%）</label>
+                        <input type="number" class="price-input" id="winRate" placeholder="输入预计胜率（0-100）" min="0" max="100" step="any">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：结果面板 -->
+            <div class="result-panel">
+                <div id="validationMessage" class="validation-message" style="display: none;">
+                    <span class="validation-icon">⚠</span>
+                    <span class="validation-text">止盈和止损价格不合法，请检查输入</span>
+                </div>
+
+                <!-- 合约 & 结果汇总表（两列） -->
+                <div id="resultSection" style="display: none;">
+                    <div class="result-section contract-result-table">
+                        <table style="width:100%;border-collapse:collapse;">
+                        <tbody>
+                            <tr><th>合约</th><td id="infoName">-</td><th>开仓方向</th><td id="directionDisplay">--</td></tr>
+                            <tr><th>保证金率</th><td id="infoMargin">-</td><th>交易期望</th><td id="tradingExpectancy">-</td></tr>
+                            <tr><th>每跳价格</th><td id="infoTick">-</td><th>盈亏比</th><td id="profitRatio">-</td></tr>
+                            <tr><th>合约乘数</th><td id="infoMultiplier">-</td><th>最差止盈价</th><td id="worstTakeProfit">-</td></tr>
+                            <tr><th>手续费方式</th><td id="infoFeeType">-</td><th>盈利比例</th><td id="profitPercentage">-</td></tr>
+                            <tr><th>手续费</th><td id="infoFee">-</td><th>亏损比例</th><td id="lossPercentage">-</td></tr>
+                            <tr><th>风险/保证金</th><td id="riskMarginRatio">-</td><th>收益/保证金</th><td id="profitMarginRatio">-</td></tr>
+                        </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 手数明细表 -->
+                <div class="result-section" id="resultTableWrapper" style="display: none;">
+                    <table class="result-table">
+                        <thead>
+                            <tr>
+                                <th>手数</th>
+                                <th>风险</th>
+                                <th>收益</th>
+                                <th>风险占比</th>
+                                <th>仓位占比</th>
+                                <th>手续费</th>
+                                <th>保证金</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let futuresContracts = [];
+        let currentContract = null;
+        let copyData = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedCapital = localStorage.getItem('totalCapital');
+            if (savedCapital !== null && savedCapital !== '') {
+                document.getElementById('totalCapital').value = savedCapital;
+            }
+            fetchContracts();
+        });
+
+        async function fetchContracts() {
+            const apiUrl = 'http://dict.openctp.cn/instruments?types=futures';
+            try {
+                const productNameMap = await fetchProductNameMap();
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                if (data.rsp_code === 0 && data.data && data.data.length > 0) {
+                    futuresContracts = data.data
+                        .filter(item => item.InstLifePhase === '1')
+                        .map(item => {
+                            // 合约代码数字部分仅 3 位时（如 cf701），依据交割年份补全十位数字（2027 -> 2 -> cf2701）
+                            let code = item.InstrumentID;
+                            const digitMatch = code.match(/(\d+)$/);
+                            if (digitMatch && digitMatch[1].length === 3 && item.DeliveryYear) {
+                                const decade = Math.floor((Number(item.DeliveryYear) % 100) / 10);
+                                code = code.slice(0, digitMatch.index) + decade + digitMatch[1];
+                            }
+                            // 名称优先取产品中文名 + 时间，如 CF2701 -> 一号棉花2701
+                            const prefixMatch = code.match(/^[A-Za-z_]+/);
+                            const prefix = prefixMatch ? prefixMatch[0].toUpperCase() : '';
+                            const suffixMatch = code.match(/\d+$/);
+                            const suffix = suffixMatch ? suffixMatch[0] : '';
+                            const productName = productNameMap[prefix];
+                            const name = productName ? productName + suffix : item.InstrumentName;
+                            const ratioFee = item.OpenRatioByMoney && item.OpenRatioByMoney >= 0.00001 ? item.OpenRatioByMoney : 0;
+                            let fixedFee = item.OpenRatioByVolume || 0;
+                            if (fixedFee > 0.01) {
+                                fixedFee -= 0.01;
+                            } else if (fixedFee === 0.01) {
+                                fixedFee = 0;
+                            }
+                            return {
+                                code: code,
+                                name: name,
+                                tick: item.PriceTick,
+                                multiplier: item.VolumeMultiple,
+                                marginRate: item.LongMarginRatioByMoney || item.ShortMarginRatioByMoney || 0.1,
+                                feeType: ratioFee > 0 && fixedFee > 0 ? 'both' : ratioFee > 0 ? 'rate' : 'fixed',
+                                feeValue: ratioFee > 0 ? ratioFee : fixedFee,
+                                ratioFee: ratioFee,
+                                fixedFee: fixedFee
+                            };
+                        });
+                }
+            } catch (e) {
+                console.log('API获取合约数据失败');
+            }
+            initSearchSelect();
+            initAutoCalculate();
+            fetchLivePrices();
+        }
+
+        async function fetchProductNameMap() {
+            const map = {};
+            try {
+                const response = await fetch('http://dict.openctp.cn/products?types=futures');
+                const data = await response.json();
+                if (data.rsp_code === 0 && data.data && data.data.length > 0) {
+                    data.data.forEach(p => {
+                        if (p.ProductID != null) {
+                            map[String(p.ProductID).toUpperCase()] = p.ProductName;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('获取产品中文名失败');
+            }
+            return map;
+        }
+
+        async function fetchLivePrices() {
+            const apiUrl = 'https://api.tenapi.cn/futures/';
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                if (data.code === 200 && data.data && data.data.length > 0) {
+                    const priceMap = {};
+                    data.data.forEach(item => {
+                        if (item.code && item.price) {
+                            priceMap[item.code] = parseFloat(item.price);
+                        }
+                    });
+                    futuresContracts.forEach(c => {
+                        if (priceMap[c.code]) {
+                            c.currentPrice = priceMap[c.code];
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('使用本地默认数据');
+            }
+        }
+
+        function renderDropdown(filter = '') {
+            const dropdown = document.getElementById('contractDropdown');
+            dropdown.innerHTML = '';
+            const filtered = futuresContracts.filter(c =>
+                c.code.toLowerCase().includes(filter.toLowerCase()) ||
+                c.name.includes(filter)
+            );
+
+            if (filtered.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'dropdown-item';
+                noResult.textContent = '未找到匹配的合约';
+                dropdown.appendChild(noResult);
+                return;
+            }
+
+            filtered.forEach(contract => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.innerHTML = `
+                    <span class="code">${contract.code}</span>
+                    <span class="name">${contract.name}</span>
+                `;
+                item.addEventListener('click', () => {
+                    selectContract(contract);
+                    dropdown.classList.remove('show');
+                });
+                dropdown.appendChild(item);
+            });
+        }
+
+        function initSearchSelect() {
+            const searchInput = document.getElementById('contractSearch');
+            const dropdown = document.getElementById('contractDropdown');
+
+            searchInput.addEventListener('input', (e) => {
+                renderDropdown(e.target.value);
+                dropdown.classList.add('show');
+            });
+
+            searchInput.addEventListener('focus', () => {
+                if (currentContract) {
+                    currentContract = null;
+                    searchInput.value = '';
+                    document.getElementById('selectedContract').value = '';
+                    document.getElementById('resultSection').style.display = 'none';
+                    document.getElementById('validationMessage').style.display = 'none';
+                }
+                renderDropdown(searchInput.value);
+                dropdown.classList.add('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            renderDropdown();
+        }
+
+        function selectContract(contract) {
+            currentContract = contract;
+            document.getElementById('contractSearch').value = `${contract.code} - ${contract.name}`;
+            document.getElementById('selectedContract').value = contract.code;
+
+            document.getElementById('entryPrice').value = '';
+            document.getElementById('stopLossPrice').value = '';
+            document.getElementById('takeProfitPrice').value = '';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('validationMessage').style.display = 'none';
+
+            document.getElementById('infoName').textContent = contract.name;
+            document.getElementById('infoTick').textContent = contract.tick;
+            document.getElementById('infoMultiplier').textContent = contract.multiplier;
+            document.getElementById('infoMargin').textContent = (contract.marginRate * 100).toFixed(1) + '%';
+            let feeTypeText = '';
+            let feeText = '';
+            if (contract.feeType === 'both') {
+                feeTypeText = '比例+固定';
+                feeText = `${(contract.ratioFee * 10000).toFixed(4)}万分之一 + ${contract.fixedFee.toFixed(2)}元/手`;
+            } else if (contract.feeType === 'fixed') {
+                feeTypeText = '固定金额';
+                feeText = `${contract.fixedFee.toFixed(2)}元/手`;
+            } else {
+                feeTypeText = '按比例';
+                feeText = `${(contract.ratioFee * 10000).toFixed(4)}万分之一`;
+            }
+            document.getElementById('infoFeeType').textContent = feeTypeText;
+            document.getElementById('infoFee').textContent = feeText;
+        }
+
+        function initAutoCalculate() {
+            const entryPrice = document.getElementById('entryPrice');
+            const stopLossPrice = document.getElementById('stopLossPrice');
+            const takeProfitPrice = document.getElementById('takeProfitPrice');
+
+            entryPrice.addEventListener('input', calculate);
+            stopLossPrice.addEventListener('input', calculate);
+            takeProfitPrice.addEventListener('input', calculate);
+
+            const winRate = document.getElementById('winRate');
+            winRate.addEventListener('input', calculate);
+
+            const totalCapital = document.getElementById('totalCapital');
+            totalCapital.addEventListener('input', () => {
+                localStorage.setItem('totalCapital', totalCapital.value);
+                calculate();
+            });
+        }
+
+        function calculate() {
+            const validationMessage = document.getElementById('validationMessage');
+            const resultSection = document.getElementById('resultSection');
+
+            if (!currentContract) {
+                resultSection.style.display = 'none';
+                document.getElementById('resultTableWrapper').style.display = 'none';
+                validationMessage.style.display = 'none';
+                return;
+            }
+
+            const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+            const stopLossPrice = parseFloat(document.getElementById('stopLossPrice').value);
+            const takeProfitPrice = parseFloat(document.getElementById('takeProfitPrice').value);
+            const totalCapital = parseFloat(document.getElementById('totalCapital').value);
+
+            // 预计胜率为必填，必须是 0-100 之间的数字
+            const winRateInput = document.getElementById('winRate');
+            const winRateText = winRateInput.value.trim();
+            const winRate = parseFloat(winRateText);
+            const winRateValid = winRateText !== '' && !isNaN(winRate) && winRate >= 0 && winRate <= 100;
+            winRateInput.classList.toggle('invalid', winRateText !== '' && !winRateValid);
+
+            if (isNaN(entryPrice) || isNaN(stopLossPrice) || isNaN(takeProfitPrice) || isNaN(totalCapital) || totalCapital <= 0 || !winRateValid) {
+                resultSection.style.display = 'none';
+                document.getElementById('resultTableWrapper').style.display = 'none';
+                if (winRateText === '') {
+                    validationMessage.querySelector('.validation-text').textContent = '请填写预计胜率（0-100之间的数字）';
+                    validationMessage.style.display = 'flex';
+                } else if (!winRateValid) {
+                    validationMessage.querySelector('.validation-text').textContent = '预计胜率需为0-100之间的数字';
+                    validationMessage.style.display = 'flex';
+                } else {
+                    validationMessage.style.display = 'none';
+                }
+                return;
+            }
+
+            let direction = '';
+            if (takeProfitPrice > entryPrice && stopLossPrice < entryPrice) {
+                direction = 'long';
+            } else if (takeProfitPrice < entryPrice && stopLossPrice > entryPrice) {
+                direction = 'short';
+            }
+
+            if (!direction) {
+                resultSection.style.display = 'none';
+                document.getElementById('resultTableWrapper').style.display = 'none';
+                validationMessage.querySelector('.validation-text').textContent = '止盈和止损价格不合法，请检查输入';
+                validationMessage.style.display = 'flex';
+                return;
+            }
+
+            validationMessage.style.display = 'none';
+
+            const { multiplier, marginRate, feeType, feeValue } = currentContract;
+
+            let riskPerLot = 0;
+            let profitPerLot = 0;
+
+            if (direction === 'long') {
+                riskPerLot = (entryPrice - stopLossPrice) * multiplier;
+                profitPerLot = (takeProfitPrice - entryPrice) * multiplier;
+            } else {
+                riskPerLot = (stopLossPrice - entryPrice) * multiplier;
+                profitPerLot = (entryPrice - takeProfitPrice) * multiplier;
+            }
+
+            let feePerLot = 0;
+            const rateFeeAmount = entryPrice * multiplier * (currentContract.ratioFee || 0);
+            const fixedFeeAmount = currentContract.fixedFee || 0;
+            feePerLot = (rateFeeAmount + fixedFeeAmount) * 2;
+
+            const netProfitPerLot = profitPerLot - feePerLot;
+            const netRiskPerLot = riskPerLot + feePerLot;
+            const profitRatio = riskPerLot > 0 ? (netProfitPerLot / netRiskPerLot) : 0;
+
+            const profitPercentage = entryPrice > 0 ? ((takeProfitPrice - entryPrice) / entryPrice * 100) : 0;
+            const lossPercentage = entryPrice > 0 ? ((stopLossPrice - entryPrice) / entryPrice * 100) : 0;
+
+            document.getElementById('resultSection').style.display = 'table';
+
+            const directionDisplay = document.getElementById('directionDisplay');
+            directionDisplay.textContent = direction === 'long' ? '多头' : '空头';
+            directionDisplay.style.color = direction === 'long' ? '#dc3545' : '#28a745';
+
+            const ratioElement = document.getElementById('profitRatio');
+            ratioElement.textContent = profitRatio.toFixed(2);
+            ratioElement.style.color = '#ffc107';
+
+            const profitPercentElement = document.getElementById('profitPercentage');
+            profitPercentElement.textContent = profitPercentage.toFixed(2) + '%';
+            profitPercentElement.style.color = '#dc3545';
+
+            const lossPercentElement = document.getElementById('lossPercentage');
+            lossPercentElement.textContent = lossPercentage.toFixed(2) + '%';
+            lossPercentElement.style.color = '#28a745';
+
+            const marginPerLot = entryPrice * multiplier * marginRate;
+            const riskMarginRatio = marginPerLot > 0 ? (netRiskPerLot / marginPerLot * 100) : 0;
+            const profitMarginRatio = marginPerLot > 0 ? (netProfitPerLot / marginPerLot * 100) : 0;
+
+            const riskMarginElement = document.getElementById('riskMarginRatio');
+            riskMarginElement.textContent = riskMarginRatio.toFixed(2) + '%';
+            riskMarginElement.style.color = '#28a745';
+
+            const profitMarginElement = document.getElementById('profitMarginRatio');
+            profitMarginElement.textContent = profitMarginRatio.toFixed(2) + '%';
+            profitMarginElement.style.color = '#dc3545';
+
+            // 交易期望 = 胜率 × (盈亏比 + 1) - 1（胜率按百分比输入，转为小数计算）
+            let expectancyText = '-';
+            const expectancyElement = document.getElementById('tradingExpectancy');
+            if (winRateValid) {
+                const expectancy = (winRate / 100) * (profitRatio + 1) - 1;
+                expectancyText = expectancy.toFixed(2);
+                expectancyElement.textContent = expectancyText;
+                expectancyElement.style.color = expectancy > 0 ? '#dc3545' : (expectancy < 0 ? '#28a745' : '#ffc107');
+            } else {
+                expectancyElement.textContent = '-';
+                expectancyElement.style.color = '';
+            }
+
+            // 最差止盈价：止损与开仓价不变，盈亏比为 1.5 时的止盈价
+            const targetProfitPerLot = 1.5 * riskPerLot + 2.5 * feePerLot;
+            let worstTakeProfitPrice = direction === 'long'
+                ? entryPrice + targetProfitPerLot / multiplier
+                : entryPrice - targetProfitPerLot / multiplier;
+            if (currentContract.tick && currentContract.tick > 0) {
+                worstTakeProfitPrice = Math.round(worstTakeProfitPrice / currentContract.tick) * currentContract.tick;
+            }
+            const tickStr = String(currentContract.tick || 0);
+            const tickDecimals = tickStr.includes('.') ? tickStr.split('.')[1].length : 0;
+
+            const worstTakeProfitElement = document.getElementById('worstTakeProfit');
+            worstTakeProfitElement.textContent = worstTakeProfitPrice.toFixed(tickDecimals);
+            worstTakeProfitElement.style.color = '#ffc107';
+
+            copyData = {
+                code: currentContract.code,
+                entryPrice: entryPrice.toFixed(tickDecimals),
+                stopLossPrice: stopLossPrice.toFixed(tickDecimals),
+                takeProfitPrice: takeProfitPrice.toFixed(tickDecimals),
+                winRate: winRateValid ? winRateText : '',
+                expectancy: expectancyText,
+                profitRatio: profitRatio.toFixed(2),
+                worstTakeProfitPrice: worstTakeProfitPrice.toFixed(tickDecimals)
+            };
+
+            const tableBody = document.getElementById('resultTableBody');
+            tableBody.innerHTML = '';
+            document.getElementById('resultTableWrapper').style.display = 'block';
+
+            // 列表条数：恰好到仓位占比不超过 100% 且风险不超过总资金 2% 的那一行为止
+            let maxLotsToShow = marginPerLot > 0 ? Math.ceil(totalCapital / marginPerLot) : 0;
+            if (netRiskPerLot > 0) {
+                maxLotsToShow = Math.min(maxLotsToShow, Math.ceil(totalCapital * 0.02 / netRiskPerLot));
+            }
+
+            for (let lots = 1; lots <= maxLotsToShow; lots++) {
+                const risk = netRiskPerLot * lots;
+                const profit = netProfitPerLot * lots;
+                const margin = entryPrice * multiplier * marginRate * lots;
+                const fee = feePerLot * lots;
+                const positionRatio = margin / totalCapital * 100;
+                const riskPercent = risk / totalCapital * 100;
+                if (positionRatio > 100 || riskPercent > 2) break;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${lots}</td>
+                    <td class="risk">¥${risk.toFixed(2)}</td>
+                    <td class="profit">¥${profit.toFixed(2)}</td>
+                    <td>${riskPercent.toFixed(2)}%</td>
+                    <td>${positionRatio.toFixed(2)}%</td>
+                    <td>¥${fee.toFixed(2)}</td>
+                    <td>¥${margin.toFixed(2)}</td>
+                `;
+                row.addEventListener('click', () => {
+                    copyTradePlan(lots, positionRatio.toFixed(2) + '%');
+                    row.classList.add('clicked');
+                    setTimeout(() => row.classList.remove('clicked'), 600);
+                });
+                tableBody.appendChild(row);
+            }
+        }
+
+        function pad(n) {
+            return n < 10 ? '0' + n : '' + n;
+        }
+
+        function formatDateTime(date) {
+            return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ` +
+                `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        const API_KEY = 'sk-GmejMObJ6gxZnXcXXEuw8eAPq6PbzYW6n70XzjkN2vYzW0rR';
+        const API_URL = 'https://api.agnes-ai.cn/v1/chat/completions';
+        const MODEL = 'agnes-2.5-flash';
+
+        function getContractOptions() {
+            return futuresContracts.map(c => `${c.code}|${c.name}`).join('\n');
+        }
+
+        async function callVisionModel(imageBase64) {
+            const contractList = getContractOptions();
+            const systemPrompt = `你是一个期货交易分析助手。用户会发一张包含交易计划或行情的图片，你需要从中提取：合约代码、开仓价格、止损价格、止盈价格。
+
+图片中会用**多头盈亏线**或**空头盈亏线**的可视化形式表示交易计划，关键特征如下：
+
+- **绿色区域在红色区域上方** → 表示**空头**持仓
+- **绿色区域在红色区域下方** → 表示**多头**持仓
+
+图表中还会以文字明确标注"开仓"、"止损价"、"止盈价"等位置。
+
+**重要：务必先根据颜色位置判断多空方向，再对应提取止损价和止盈价：**
+
+- 如果是多头（绿色区域在下）：止损价 < 开仓价 < 止盈价（空头反之：止盈价 < 开仓价 < 止损价）
+
+提取时请严格遵守：
+1. 从图片中识别多空方向（多头/空头）
+2. 根据方向对应填写：
+   - 多头：price_lower = stopLossPrice，price_higer = takeProfitPrice
+   - 空头：price_lower = takeProfitPrice，price_higher = stopLossPrice
+3. 合约代码必须从下列可选合约列表中选择，如果图片中的合约不在列表中，返回错误信息
+4. 三个价格必须是合法的正数
+5. 只输出 JSON，不要有任何其他内容
+
+可选合约列表（格式：代码|名称）：
+${contractList}
+
+输出格式（JSON）：
+{
+  "code": "合约代码，如 IF2509",
+  "entryPrice": 数字，开仓价格,
+  "stopLossPrice": 数字，止损价格,
+  "takeProfitPrice": 数字，止盈价格,
+  "error": null 或 "错误原因（当无法识别时填写）"
+}`;
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: MODEL,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        {
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: '请从这张图片中提取交易信息：' },
+                                { type: 'image_url', image_url: { url: imageBase64 } }
+                            ]
+                        }
+                    ],
+                    response_format: { type: 'json_object' }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API 请求失败: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content;
+            if (!content) throw new Error('模型未返回内容');
+
+            return JSON.parse(content);
+        }
+
+        function applyParsedResult(result) {
+            if (result.error) {
+                alert(result.error);
+                return;
+            }
+
+            // 查找匹配的合约
+            const matched = futuresContracts.find(c => c.code === result.code);
+            if (!matched) {
+                alert(`未在合约列表中找到 "${result.code}"，请手动选择`);
+                return;
+            }
+
+            selectContract(matched);
+
+            // 填入价格
+            const tickStr = String(matched.tick || 0);
+            const tickDecimals = tickStr.includes('.') ? tickStr.split('.')[1].length : 0;
+
+            document.getElementById('entryPrice').value = parseFloat(result.entryPrice).toFixed(tickDecimals);
+            document.getElementById('stopLossPrice').value = parseFloat(result.stopLossPrice).toFixed(tickDecimals);
+            document.getElementById('takeProfitPrice').value = parseFloat(result.takeProfitPrice).toFixed(tickDecimals);
+
+            calculate();
+        }
+
+        async function handleImageUpload(file) {
+            const uploadArea = document.getElementById('uploadArea');
+            const uploadHint = document.getElementById('uploadHint');
+
+            // 显示加载状态
+            uploadHint.textContent = '识别中...';
+            uploadArea.classList.add('dragover');
+
+            try {
+                // 读取图片为 base64
+                const base64 = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+
+                // 显示预览
+                let preview = uploadArea.querySelector('img.preview');
+                if (!preview) {
+                    preview = document.createElement('img');
+                    preview.className = 'preview';
+                    uploadArea.appendChild(preview);
+                }
+                preview.src = base64;
+
+                // 调用模型
+                const result = await callVisionModel(base64);
+                applyParsedResult(result);
+            } catch (e) {
+                alert('识别失败：' + e.message);
+            } finally {
+                uploadHint.textContent = '点击或拖拽上传交易截图';
+                uploadArea.classList.remove('dragover');
+            }
+        }
+
+        // 初始化上传控件
+        (function initUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const uploadFile = document.getElementById('uploadFile');
+
+            uploadArea.addEventListener('click', () => uploadFile.click());
+
+            uploadFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleImageUpload(file);
+                }
+                uploadFile.value = '';
+            });
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleImageUpload(file);
+                }
+            });
+
+            document.addEventListener('paste', (e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                        const file = item.getAsFile();
+                        if (file) handleImageUpload(file);
+                        break;
+                    }
+                }
+            });
+        })();
+
+        async function copyTradePlan(lots, positionRatio) {
+            if (!copyData) return;
+
+            const text = [
+                '---',
+                `合约: ${copyData.code}`,
+                `交易期望: ${copyData.expectancy}`,
+                `胜率: ${copyData.winRate ? copyData.winRate + '%' : '-'}`,
+                `盈亏比: ${copyData.profitRatio}`,
+                `开仓时间: ${formatDateTime(new Date())}`,
+                `开仓价: ${copyData.entryPrice}`,
+                `止损价: ${copyData.stopLossPrice}`,
+                `止盈价: ${copyData.takeProfitPrice}`,
+                `最差止盈价: ${copyData.worstTakeProfitPrice}`,
+                `手数: ${lots}`,
+                `仓位占比: ${positionRatio}`,
+                '平仓时间: ',
+                '平仓价: ',
+                '收益: ',
+                '---',
+                '',
+                '# 开仓',
+                '',
+                '| 模块   | 内容  |',
+                '| ---- | --- |',
+                '| 趋势定位 |     |',
+                '| 关键信号 |     |',
+                `| 交易预期 |     |`,
+                '| 即时心态 |     |',
+                '',
+                '# 变更',
+                '',
+                '| 模块   | 内容  |',
+                '| ---- | --- |',
+                '| 持仓情况 |     |',
+                '| 变更原因 |     |',
+                '| 执行动作 |     |',
+                '| 即时心态 |     |',
+                '',
+                '# 平仓',
+                '',
+                '| 模块   | 内容  |',
+                '| ---- | --- |',
+                '| 交易评价 |     |',
+                '| 决策回溯 |     |',
+                '| 认知升级 |     |',
+                '| 行动转化 |     |'
+            ].join('\n');
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    fallbackCopy(text);
+                }
+            } catch (e) {
+                fallbackCopy(text);
+            }
+        }
+    </script>
+</body>
+
+</html>
