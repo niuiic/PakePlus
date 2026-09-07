@@ -196,6 +196,10 @@
             border-color: #667eea;
         }
 
+        .price-input.invalid {
+            border-color: #dc3545;
+        }
+
         .calculate-btn {
             width: 100%;
             padding: 15px;
@@ -543,6 +547,11 @@
                             <input type="number" class="price-input" id="takeProfitPrice" placeholder="输入止盈价格" step="any">
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label>预计胜率（%）</label>
+                        <input type="number" class="price-input" id="winRate" placeholder="输入预计胜率（0-100）" min="0" max="100" step="any">
+                    </div>
                 </div>
             </div>
 
@@ -559,12 +568,12 @@
                         <table style="width:100%;border-collapse:collapse;">
                         <tbody>
                             <tr><th>合约</th><td id="infoName">-</td><th>开仓方向</th><td id="directionDisplay">--</td></tr>
-                            <tr><th>保证金率</th><td id="infoMargin">-</td><th>盈亏比</th><td id="profitRatio">-</td></tr>
-                            <tr><th>每跳价格</th><td id="infoTick">-</td><th>最差止盈价</th><td id="worstTakeProfit">-</td></tr>
-                            <tr><th>合约乘数</th><td id="infoMultiplier">-</td><th>盈利比例</th><td id="profitPercentage">-</td></tr>
-                            <tr><th>手续费方式</th><td id="infoFeeType">-</td><th>亏损比例</th><td id="lossPercentage">-</td></tr>
-                            <tr><th>手续费</th><td id="infoFee">-</td><th>风险/保证金</th><td id="riskMarginRatio">-</td></tr>
-                            <tr><td colspan="2" style="height:12px;"></td><th>收益/保证金</th><td id="profitMarginRatio">-</td></tr>
+                            <tr><th>保证金率</th><td id="infoMargin">-</td><th>交易期望</th><td id="tradingExpectancy">-</td></tr>
+                            <tr><th>每跳价格</th><td id="infoTick">-</td><th>盈亏比</th><td id="profitRatio">-</td></tr>
+                            <tr><th>合约乘数</th><td id="infoMultiplier">-</td><th>最差止盈价</th><td id="worstTakeProfit">-</td></tr>
+                            <tr><th>手续费方式</th><td id="infoFeeType">-</td><th>盈利比例</th><td id="profitPercentage">-</td></tr>
+                            <tr><th>手续费</th><td id="infoFee">-</td><th>亏损比例</th><td id="lossPercentage">-</td></tr>
+                            <tr><th>风险/保证金</th><td id="riskMarginRatio">-</td><th>收益/保证金</th><td id="profitMarginRatio">-</td></tr>
                         </tbody>
                         </table>
                     </div>
@@ -798,6 +807,9 @@
             stopLossPrice.addEventListener('input', calculate);
             takeProfitPrice.addEventListener('input', calculate);
 
+            const winRate = document.getElementById('winRate');
+            winRate.addEventListener('input', calculate);
+
             const totalCapital = document.getElementById('totalCapital');
             totalCapital.addEventListener('input', () => {
                 localStorage.setItem('totalCapital', totalCapital.value);
@@ -821,10 +833,25 @@
             const takeProfitPrice = parseFloat(document.getElementById('takeProfitPrice').value);
             const totalCapital = parseFloat(document.getElementById('totalCapital').value);
 
-            if (isNaN(entryPrice) || isNaN(stopLossPrice) || isNaN(takeProfitPrice) || isNaN(totalCapital) || totalCapital <= 0) {
+            // 预计胜率为必填，必须是 0-100 之间的数字
+            const winRateInput = document.getElementById('winRate');
+            const winRateText = winRateInput.value.trim();
+            const winRate = parseFloat(winRateText);
+            const winRateValid = winRateText !== '' && !isNaN(winRate) && winRate >= 0 && winRate <= 100;
+            winRateInput.classList.toggle('invalid', winRateText !== '' && !winRateValid);
+
+            if (isNaN(entryPrice) || isNaN(stopLossPrice) || isNaN(takeProfitPrice) || isNaN(totalCapital) || totalCapital <= 0 || !winRateValid) {
                 resultSection.style.display = 'none';
                 document.getElementById('resultTableWrapper').style.display = 'none';
-                validationMessage.style.display = 'none';
+                if (winRateText === '') {
+                    validationMessage.querySelector('.validation-text').textContent = '请填写预计胜率（0-100之间的数字）';
+                    validationMessage.style.display = 'flex';
+                } else if (!winRateValid) {
+                    validationMessage.querySelector('.validation-text').textContent = '预计胜率需为0-100之间的数字';
+                    validationMessage.style.display = 'flex';
+                } else {
+                    validationMessage.style.display = 'none';
+                }
                 return;
             }
 
@@ -838,6 +865,7 @@
             if (!direction) {
                 resultSection.style.display = 'none';
                 document.getElementById('resultTableWrapper').style.display = 'none';
+                validationMessage.querySelector('.validation-text').textContent = '止盈和止损价格不合法，请检查输入';
                 validationMessage.style.display = 'flex';
                 return;
             }
@@ -899,8 +927,23 @@
             profitMarginElement.textContent = profitMarginRatio.toFixed(2) + '%';
             profitMarginElement.style.color = '#dc3545';
 
-            // 最差止盈价：止损与开仓价不变，盈亏比为 1.5 时的止盈价
-            const targetProfitPerLot = 1.5 * riskPerLot + 2.5 * feePerLot;
+            // 交易期望 = 胜率 × (盈亏比 + 1) - 1（胜率按百分比输入，转为小数计算）
+            let expectancyText = '-';
+            const expectancyElement = document.getElementById('tradingExpectancy');
+            if (winRateValid) {
+                const expectancy = (winRate / 100) * (profitRatio + 1) - 1;
+                expectancyText = expectancy.toFixed(2);
+                expectancyElement.textContent = expectancyText;
+                expectancyElement.style.color = expectancy > 0 ? '#dc3545' : (expectancy < 0 ? '#28a745' : '#ffc107');
+            } else {
+                expectancyElement.textContent = '-';
+                expectancyElement.style.color = '';
+            }
+
+            // 最差止盈价：止损与开仓价不变，交易期望正好为 0 时的止盈价
+            const targetProfitRatio = winRate > 0 ? (100 / winRate - 1) : 0;
+            const targetNetProfitPerLot = targetProfitRatio * netRiskPerLot;
+            const targetProfitPerLot = targetNetProfitPerLot + feePerLot;
             let worstTakeProfitPrice = direction === 'long'
                 ? entryPrice + targetProfitPerLot / multiplier
                 : entryPrice - targetProfitPerLot / multiplier;
@@ -919,6 +962,8 @@
                 entryPrice: entryPrice.toFixed(tickDecimals),
                 stopLossPrice: stopLossPrice.toFixed(tickDecimals),
                 takeProfitPrice: takeProfitPrice.toFixed(tickDecimals),
+                winRate: winRateValid ? winRateText : '',
+                expectancy: expectancyText,
                 profitRatio: profitRatio.toFixed(2),
                 worstTakeProfitPrice: worstTakeProfitPrice.toFixed(tickDecimals)
             };
@@ -1173,11 +1218,13 @@ ${contractList}
             const text = [
                 '---',
                 `合约: ${copyData.code}`,
+                `交易期望: ${copyData.expectancy}`,
+                `胜率: ${copyData.winRate ? copyData.winRate + '%' : '-'}`,
+                `盈亏比: ${copyData.profitRatio}`,
                 `开仓时间: ${formatDateTime(new Date())}`,
                 `开仓价: ${copyData.entryPrice}`,
                 `止损价: ${copyData.stopLossPrice}`,
                 `止盈价: ${copyData.takeProfitPrice}`,
-                `盈亏比: ${copyData.profitRatio}`,
                 `最差止盈价: ${copyData.worstTakeProfitPrice}`,
                 `手数: ${lots}`,
                 `仓位占比: ${positionRatio}`,
