@@ -573,7 +573,32 @@
                     <div class="form-group">
                         <label>预计胜率（%）</label>
                         <input type="number" class="price-input" id="winRate" placeholder="输入预计胜率（0-100）" min="0" max="100" step="any">
+                        <div id="winRateCheckboxes" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="position"> 位置
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="pattern"> 形态
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="volume"> 量能
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="trend"> 趋势
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="resonance"> 共振
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="stoploss" id="stoplossCb"> 止损
+                            </label>
+                            <label style="display:flex;align-items:center;gap:5px;font-weight:normal;cursor:pointer;">
+                                <input type="checkbox" class="winrate-cb" value="intraday"> 日内
+                            </label>
+                        </div>
                     </div>
+
+                    <button class="swap-btn" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin-top:10px;" onclick="resetForm()">重置</button>
                 </div>
             </div>
 
@@ -829,14 +854,53 @@
             stopLossPrice.addEventListener('input', calculate);
             takeProfitPrice.addEventListener('input', calculate);
 
-            const winRate = document.getElementById('winRate');
-            winRate.addEventListener('input', calculate);
+            const checkboxes = document.querySelectorAll('.winrate-cb');
+            checkboxes.forEach(cb => cb.addEventListener('change', () => {
+                // 自动填入胜率，但如果用户手动修改过输入框则不覆盖
+                const winRateInput = document.getElementById('winRate');
+                if (!winRateInput.dataset.manual) {
+                    winRateInput.value = computeWinRate();
+                }
+                calculate();
+            }));
+
+            const winRateInputEl = document.getElementById('winRate');
+            winRateInputEl.addEventListener('input', () => {
+                winRateInputEl.dataset.manual = '1';
+                calculate();
+            });
+            winRateInputEl.addEventListener('blur', () => {
+                // 失焦时清除手动标记，允许下次勾选重新自动填入
+                delete winRateInputEl.dataset.manual;
+                if (!winRateInputEl.value) calculate();
+            });
 
             const totalCapital = document.getElementById('totalCapital');
             totalCapital.addEventListener('input', () => {
                 localStorage.setItem('totalCapital', totalCapital.value);
                 calculate();
             });
+        }
+
+        function computeWinRate() {
+            const checkedCount = document.querySelectorAll('.winrate-cb:checked').length;
+            return checkedCount === 0 ? 0 : 25 + (checkedCount - 1) * 5;
+        }
+
+        function resetForm() {
+            document.getElementById('contractSearch').value = '';
+            document.getElementById('selectedContract').value = '';
+            document.getElementById('entryPrice').value = '';
+            document.getElementById('stopLossPrice').value = '';
+            document.getElementById('takeProfitPrice').value = '';
+            document.getElementById('winRate').value = '';
+            document.querySelectorAll('.winrate-cb').forEach(cb => cb.checked = false);
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('resultTableWrapper').style.display = 'none';
+            document.getElementById('validationMessage').style.display = 'none';
+            document.getElementById('swapButton').style.display = 'none';
+            currentContract = null;
+            copyData = null;
         }
 
         function swapTakeProfitStopLoss() {
@@ -864,21 +928,31 @@
             const takeProfitPrice = parseFloat(document.getElementById('takeProfitPrice').value);
             const totalCapital = parseFloat(document.getElementById('totalCapital').value);
 
-            // 预计胜率为必填，必须是 0-100 之间的数字
+            // 获取胜率：优先使用输入框的值，否则根据勾选的判定标准计算
             const winRateInput = document.getElementById('winRate');
             const winRateText = winRateInput.value.trim();
             const winRate = parseFloat(winRateText);
-            const winRateValid = winRateText !== '' && !isNaN(winRate) && winRate >= 0 && winRate <= 100;
-            winRateInput.classList.toggle('invalid', winRateText !== '' && !winRateValid);
+            const winRateFromInput = winRateText !== '' && !isNaN(winRate) && winRate >= 0 && winRate <= 100;
+            let winRateValid = winRateFromInput;
+            let winRateValue = winRateFromInput ? winRate : null;
+
+            if (!winRateValid) {
+                const checkedCount = document.querySelectorAll('.winrate-cb:checked').length;
+                if (checkedCount === 0) {
+                    winRateValue = 0;
+                    winRateValid = false;
+                } else {
+                    winRateValue = 25 + (checkedCount - 1) * 5;
+                    winRateValid = true;
+                }
+            }
+            winRateInput.classList.toggle('invalid', winRateText !== '' && !winRateFromInput);
 
             if (isNaN(entryPrice) || isNaN(stopLossPrice) || isNaN(takeProfitPrice) || isNaN(totalCapital) || totalCapital <= 0 || !winRateValid) {
                 resultSection.style.display = 'none';
                 document.getElementById('resultTableWrapper').style.display = 'none';
-                if (winRateText === '') {
-                    validationMessage.querySelector('.validation-text').textContent = '请填写预计胜率（0-100之间的数字）';
-                    validationMessage.style.display = 'flex';
-                } else if (!winRateValid) {
-                    validationMessage.querySelector('.validation-text').textContent = '预计胜率需为0-100之间的数字';
+                if (!winRateValid) {
+                    validationMessage.querySelector('.validation-text').textContent = '请填写预计胜率或勾选判定标准';
                     validationMessage.style.display = 'flex';
                 } else {
                     validationMessage.style.display = 'none';
@@ -964,7 +1038,7 @@
             let expectancyText = '-';
             const expectancyElement = document.getElementById('tradingExpectancy');
             if (winRateValid) {
-                const expectancy = (winRate / 100) * (profitRatio + 1) - 1;
+                const expectancy = (winRateValue / 100) * (profitRatio + 1) - 1;
                 expectancyText = expectancy.toFixed(2);
                 expectancyElement.textContent = expectancyText;
                 expectancyElement.style.color = expectancy > 0 ? '#dc3545' : (expectancy < 0 ? '#28a745' : '#ffc107');
@@ -974,7 +1048,7 @@
             }
 
             // 最差止盈价：止损与开仓价不变，交易期望正好为 0 时的止盈价
-            const targetProfitRatio = winRate > 0 ? (100 / winRate - 1) : 0;
+            const targetProfitRatio = winRateValue > 0 ? (100 / winRateValue - 1) : 0;
             const targetNetProfitPerLot = targetProfitRatio * netRiskPerLot;
             const targetProfitPerLot = targetNetProfitPerLot + feePerLot;
             let worstTakeProfitPrice = direction === 'long'
@@ -995,7 +1069,7 @@
                 entryPrice: entryPrice.toFixed(tickDecimals),
                 stopLossPrice: stopLossPrice.toFixed(tickDecimals),
                 takeProfitPrice: takeProfitPrice.toFixed(tickDecimals),
-                winRate: winRateValid ? winRateText : '',
+                winRate: winRateValid ? String(winRateValue) : '',
                 expectancy: expectancyText,
                 profitRatio: profitRatio.toFixed(2),
                 worstTakeProfitPrice: worstTakeProfitPrice.toFixed(tickDecimals)
